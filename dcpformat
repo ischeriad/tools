@@ -1,0 +1,33 @@
+#!/bin/bash
+
+if [ $# == 0 ]
+then
+	echo "Usage: `basename $0` device volume-label"
+	exit
+fi
+
+# device
+dev=$1
+partition="$1"1
+
+# volume-label
+label=$2
+
+fdisk -l $dev
+echo
+
+read -p "Are you sure? [y|N] " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]
+then
+	# do dangerous stuff
+
+	# create pertition table
+	parted $dev --script mktable msdos
+
+	# create file system
+	parted $dev --script mkpart primary ext3 0% 100%
+	mkfs.ext3 -I 128 $partition -L "$label"
+
+	parted $dev --script print
+fi
