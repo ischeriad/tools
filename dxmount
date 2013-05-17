@@ -1,0 +1,12 @@
+#!/bin/bash
+
+scsi_host=/sys/class/scsi_host/host3/scan
+
+# scan for DX115 volume
+if [ -e "$scsi_host" ]
+then
+	echo "host found"
+	echo 0 - 0 > "$scsi_host"
+else
+	echo "scsi_host not found"
+fi
