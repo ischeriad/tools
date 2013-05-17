@@ -1,0 +1,26 @@
+#!/bin/bash
+
+if [ $# == 0 ]
+then
+	echo "Usage: `basename $0` partition [user]"
+	echo " user		defaults to "root" if no or wrong user name is given"
+	exit
+fi
+
+# partition
+partition="$1"
+mountpoint=`lsblk $partition -n -o MOUNTPOINT`
+
+# user
+user="$2"
+uid=`id -u "$2" 2> /dev/null`
+[ "$uid" == "" ] && user=root && uid=`id -u $user` # "root" if no or wrong user name is given
+
+if [ ! "$mountpoint" == "" ]
+then
+	echo "New user: $user ($uid)"
+	chown -R $user:$user $mountpoint
+	chmod -R 755 $mountpoint
+else
+	echo "$partition has to be mounted"
+fi
