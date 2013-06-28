@@ -1,5 +1,9 @@
 #!/bin/bash
 
 # unmount DX115 volume for safe removal
-echo 1 > /sys/block/sdb/device/delete
-echo "DX115 carrier can now be removed"
+if echo 1 > /sys/block/sdb/device/delete
+then
+	echo "DX115 carrier can now be removed"
+else
+	echo "couldn't unmount DX115 carrier"
+fi
