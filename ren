@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Domingo Stephan
+# Version 0.1
+
+prefix="$1"
+shift
+
+base_n="$1"
+shift
+
+step="$1"
+shift
+
+n=$base_n
+
+for file in *.j2c ; do
+    formatted_n=$(printf "%07d" $n)
+    # re-use original file extension while we're at it.
+    mv "$file" "${prefix}${formatted_n}.${file##*.}"
+    let n=n+$step
+done
