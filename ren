@@ -1,7 +1,14 @@
 #!/bin/bash
 
 # Domingo Stephan
-# Version 0.1
+# Version 0.2
+
+[ $# -eq 0 ] && {
+  echo ""
+  echo "rename for j2c image sequences."
+  echo "Usage: $0 prefix base step"
+  exit 1
+}
 
 prefix="$1"
 shift
