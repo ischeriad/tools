@@ -1,0 +1,9 @@
+#! /bin/bash
+# v0.2 / 150803
+
+echo "Check Hashes for DCP
+PKL:"
+shopt -s nocaseglob
+grep 'OriginalFileName\|Hash' *PKL*.xml | sed -n 's/[^>]*>\([^<]*\)<.*/\1/p' | sed 'N;s/\n/ /; s/\([^ ]*\) \(.*\)/\2 \1/' | sort
+echo "SHA1:"
+for i in *; do sha1sum $i | cut -f1 -d\ | xxd -r -p | base64 | sed "s/^/$i /"; done
