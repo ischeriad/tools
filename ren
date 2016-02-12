@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Domingo Stephan
-# Version 0.2
+# Version 0.3
 
-[ $# -eq 0 ] && {
+[ $# -eq 0 ] || [ $# -ne 3 ] && {
   echo ""
   echo "rename for j2c image sequences."
   echo "Usage: $0 prefix base step"
