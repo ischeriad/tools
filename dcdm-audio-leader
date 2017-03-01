@@ -1,0 +1,22 @@
+#!/bin/bash
+# Domingo Stephan v.0.1 01.03.2017
+
+path_sox="/Volumes/dcp/_tools/sox/"
+
+SOX=${path_sox}sox
+
+[ $# -eq 0 ] || [ $# -gt 2 ] && {
+  echo ""
+  echo "add audio leader to reels for DCDM."
+  echo "Usage: $0 file_leader path_out"
+  exit 1
+}
+
+file_leader="$1"
+shift
+
+path_out="$1"
+
+for file in *.wav ; do
+  ${SOX} "${file_leader}" "${file}" "${path_out}${file}"
+done
