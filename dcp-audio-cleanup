@@ -1,0 +1,51 @@
+#!/bin/bash
+# Domingo Stephan v.0.2 09.05.2017
+
+path_sox="/Volumes/dcp/_tools/sox/"
+
+SOX=${path_sox}sox
+
+[ $# -eq 0 ] || [ $# -gt 2 ] && {
+  echo ""
+  echo "cleanup for audio reels."
+  echo "Usage: $0 path_out [path_sox]"
+  exit 1
+}
+
+path_out="$1"
+shift
+
+[ "" == "$1" ] && {
+  path_sox="$1"
+  shift
+}
+
+for file in *.aif ; do
+  case $file in
+    *1.aif)
+      channel="L"
+      ;;
+    *2.aif)
+      channel="R"
+      ;;
+    *3.aif)
+      channel="C"
+      ;;
+    *4.aif)
+      channel="LFE"
+      ;;
+    *5.aif)
+      channel="Ls"
+      ;;
+    *6.aif)
+      channel="Rs"
+      ;;
+    *)
+      exit 1
+  esac
+
+  re='(.*)_[1-6]\.aif'
+  [[ $file =~ $re ]] && {
+    ${SOX} -S "${file}" --type wav -b 24 "${path_out}/${BASH_REMATCH[1]}{"."}${channel}{".wav"}"
+  }
+done
