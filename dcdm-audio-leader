@@ -1,7 +1,9 @@
 #!/bin/bash
 # Domingo Stephan v.0.1 01.03.2017
 
-path_sox="/Volumes/dcp/_tools/sox/"
+# set -ex
+
+path_sox=""
 
 SOX=${path_sox}sox
 
