@@ -1,5 +1,5 @@
 #!/bin/bash
-# Domingo Stephan v.0.1 01.03.2017
+# Domingo Stephan v.0.2 30.08.2017
 
 # set -ex
 
@@ -7,18 +7,38 @@ path_sox=""
 
 SOX=${path_sox}sox
 
-[ $# -eq 0 ] || [ $# -gt 2 ] && {
+[ $# -eq 0 ] || [ $# -gt 3 ] && {
   echo ""
-  echo "add audio leader to reels for DCDM."
-  echo "Usage: $0 file_leader path_out"
+  echo "add audio leader and trailer to reels for DCDM."
+  echo "Usage: $0 file_leader file_trailer path_out"
   exit 1
 }
 
 file_leader="$1"
 shift
 
+file_trailer="$1"
+shift
+
 path_out="$1"
 
+
 for file in *.wav ; do
-  ${SOX} "${file_leader}" "${file}" "${path_out}${file}"
+
+  file_out="${path_out}${file}"
+
+  if [ `soxi -b "${file}"` != "24" ]
+  then
+    echo "Warning: Input file does not have 24 bit."
+  fi
+
+  old_length=`soxi -s "${file}"`
+
+  ${SOX} "${file_leader}" "${file}" "${file_trailer}" "${file_out}"
+
+  new_length=`soxi -s "${file_out}"`
+
+  echo "Old length: $[old_length/2000] frames (@24) / $[old_length/1920] frames (@25)"
+  echo "New length: $[new_length/2000] frames (@24) / $[new_length/1920] frames (@25)"
+
 done
