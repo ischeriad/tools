@@ -1,0 +1,39 @@
+#!/bin/bash
+# Domingo Stephan v.0.1 05.09.2017
+
+[ $# -lt 2 ] || [ $# -gt 3 ] && {
+  echo ""
+  echo "Split image sequence into reels."
+  echo "Use only in folders with complete sequence and nothing else!"
+  echo ""
+  echo "     Usage: $0 reels path_out [first_reel]"
+  echo ""
+  echo "     reels: text file with reel duration on each line"
+  echo "  path_out: parent directory to new reels. Format is \"REEL-XX\""
+  echo "first_reel: number of first reel"
+  exit 1
+}
+
+reels="$1"
+shift
+
+path_out="$1"
+shift
+
+first_reel="1"
+[ "" != "$1" ] && {
+  # optional argument
+  first_reel=$1
+  shift
+}
+echo "      First Reel: $first_reel"
+
+reel=$first_reel
+while IFS='' read -r line || [[ -n "$line" ]]; do
+  reel_name="REEL-$(printf "%02d" $reel)"
+  echo "$reel_name duration: $line"
+  ((reel++))
+
+  mkdir "${path_out}/${reel_name}"
+  ls | head -n $line | xargs -I {} mv {} "${path_out}/${reel_name}"
+done < "${reels}"
