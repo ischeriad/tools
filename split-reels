@@ -1,39 +1,273 @@
 #!/bin/bash
-# Domingo Stephan v.0.1 05.09.2017
+# Domingo Stephan v0.2 11.09.2017
 
-[ $# -lt 2 ] || [ $# -gt 3 ] && {
+print_usage_and_die() {
   echo ""
-  echo "Split image sequence into reels."
+  echo "Split image sequence or sound into reels."
   echo "Use only in folders with complete sequence and nothing else!"
   echo ""
-  echo "     Usage: $0 reels path_out [first_reel]"
+  echo "  Usage: $0 image [-1 n] [--ext j2c] (<reels file> | --reels <duration in Frames>...) <input path> <path_out>"
+  echo "  Usage: $0 sound [-r 24] (<reels file> | --reels <duration in Frames>...) <input files> <path_out>"
   echo ""
-  echo "     reels: text file with reel duration on each line"
-  echo "  path_out: parent directory to new reels. Format is \"REEL-XX\""
-  echo "first_reel: number of first reel"
+  echo "        reels_file            Text file with reel duration on each line"
+  echo "        path_out              Parent directory to new reels. Format is \"REEL-XX\""
+  echo ""
+  echo "  -1, --first-reel            Number of first reel (default is 1)"
+  echo "      --ext                   File extension to only affect certain files (default is j2c)"
+  echo "  -h, --help                  Prints this message"
+  echo "  -r, --rate                  Frame rate for audio calculations (24, 25, 48, 50, etc.; default is 24)"
+  echo "      --reels DURATION...     Duration of reels"
   exit 1
 }
 
-reels="$1"
-shift
+error() { echo -e ${LRED}"! "${@}${RESTORE}; }
+notice() { echo -e ${LBLUE}${@}${RESTORE}; }
+ok() { echo -e ${LGREEN}${@}${RESTORE}; }
 
-path_out="$1"
-shift
+## TODO
+#  - split image
+#  - support first reel for sound(?)
+#  - add DCDM-leader/-trailer to audio files
+#  - add DCDM-leader/-trailer to image sequences
+##
 
-first_reel="1"
-[ "" != "$1" ] && {
-  # optional argument
-  first_reel=$1
+RESTORE='\033[0m'
+
+RED='\033[00;31m'
+GREEN='\033[00;32m'
+BLUE='\033[00;34m'
+LRED='\033[01;31m'
+LGREEN='\033[01;32m'
+LBLUE='\033[01;34m'
+
+## MODE
+if [[ ( "image" == "$1" ) || ( "sound" == "$1" ) ]]
+then
+  MODE=$1
   shift
+else
+  error "please specify mode (image|sound)"
+  print_usage_and_die
+fi
+
+## OPTIONS
+while [ -n "$(echo $1 | grep '^-')" ]
+do
+  case $1 in
+    -1 | --first-reel )
+      if [[ $2 =~ ^[0-9]+$ ]]
+      then
+        first_reel=$2
+      else
+        error "first-reel has to be a positive integer (i.e. 1, 2, 3. Default is 1.) Exiting."
+        print_usage_and_die
+      fi
+      shift ;;
+
+    --ext )
+      ext=$2
+      echo "       Extension: $ext"
+      shift ;;
+
+    -h | --help )
+       ;;
+
+    -r | --rate )
+      if [[ $2 =~ ^[0-9]+$ ]]
+      then
+        fps=$2
+      else
+        error "rate has to be a positive integer (i.e. 24, 25, 48, 50, etc.). Exiting."
+        exit 1
+      fi
+      echo "            Rate: $fps"
+      shift ;;
+
+    --reels )
+      if [ -f $2 ]
+      then
+        # we have a reels file
+        reels_file=$2
+        shift
+        echo "      Reels file: $reels_file"
+      elif [[ $2 =~ ^[0-9]+$ ]]
+      then
+        # we have a list of durations
+        reels=()
+        while [[ $2 =~ ^[0-9]+$ ]]; do
+          reels+=($2)
+          shift
+        done
+        echo "           Reels: ${reels[@]}"
+      else
+        error "no reels found. Exiting."
+        print_usage_and_die
+      fi
+      ;;
+
+    * )
+      error "unknown option \"$1\""
+      print_usage_and_die
+  esac
+  shift
+done
+
+## REELS
+if [[ "" == "$reels" ]]
+then
+  if [[ "" == "$reels_file" ]]
+  then
+    reels_file="${1}"
+    shift
+  fi
+
+  if [ -f "${reels_file}" ]
+  then
+    notice "Reels is empty, reading from file $reels_file"
+    # read from reels_file
+    while read line; do
+      if [[ $line =~ ^[0-9]+$ ]]
+      then
+        reels+=($line)
+      else
+        error "Input malformed. Only integers are allowed. ($line)"
+        exit 1
+      fi
+    done < "${reels_file}"
+    echo "           Reels: ${reels[@]}"
+  else
+    error "no reels found"
+    print_usage_and_die
+  fi
+fi
+
+## INPUT
+input=()
+while [[ $# -gt 1 ]]; do
+  input+=("${1}")
+  shift
+done
+
+if [[ "" == "$input" ]]
+then
+  error "no input specified. Exiting."
+  print_usage_and_die
+else
+  echo "           Input: ${input[@]}"
+#  for i in "${input[@]}"; do
+#    echo $i
+#  done
+fi
+
+## OUTPUT
+[ "" == "$1" ] && {
+  error "No output specified"
+  print_usage_and_die
+} || {
+  path_out="${1}"
+  echo "          Output: $path_out"
+}
+
+## Setup
+# First reel
+[ "" == "$first_reel" ] && {
+  # optional argument
+  first_reel=1
 }
 echo "      First Reel: $first_reel"
 
-reel=$first_reel
-while IFS='' read -r line || [[ -n "$line" ]]; do
-  reel_name="REEL-$(printf "%02d" $reel)"
-  echo "$reel_name duration: $line"
-  ((reel++))
+# frame rate
+[ "" == "$fps" ] && {
+  # optional argument
+  fps=24
+}
+echo "      Frame Rate: $fps"
 
-  mkdir "${path_out}/${reel_name}"
-  ls | head -n $line | xargs -I {} mv {} "${path_out}/${reel_name}"
-done < "${reels}"
+
+
+split_image() {
+  echo ""
+  notice "attempting to split image..."
+
+  reel=$first_reel
+  for i in "${reels[@]}"
+  do
+    reel_name="REEL-$(printf "%02d" $reel)"
+    echo "$reel_name duration: $i frames"
+    ((reel++))
+    mkdir "${path_out}/${reel_name}"
+    ls "${input}" | head -n $i | xargs -I {} mv "${input}/{}" "${path_out}/${reel_name}"
+    frames_at_target=$(ls "${path_out}/${reel_name}" | wc -l)
+    notice "DEBUG Frames at target: $frames_at_target"
+    if [ $frames_at_target -eq $i ]
+    then
+      ok "OK"
+    elif [ $frames_at_target -lt $i ]
+    then
+      notice "Reel incomplete (${frames_at_target}/${i})"
+    else
+      notice "More files than needed, please check (${frames_at_target}/${i})"
+    fi
+  done
+
+####
+
+#   reel=$first_reel
+#   while IFS='' read -r line || [[ -n "$line" ]]; do
+#     reel_name="REEL-$(printf "%02d" $reel)"
+#     echo "$reel_name duration: $line"
+#     ((reel++))
+# 
+#     mkdir "${path_out}/${reel_name}"
+#     ls | head -n $line | xargs -I {} mv {} "${path_out}/${reel_name}"
+#   done < "${reels}"
+}
+
+split_sound() {
+  let SPF=48000/$fps
+  echo " Samples / frame: $SPF"
+
+  echo ""
+  notice "attempting to split sound..."
+
+
+  reel=$first_reel
+
+  for file in "${input[@]}"; do
+    notice "splitting $file ..."
+    # reel_name="REEL-$(printf "%02d" $reel)"
+    regex='([^.]*\.?[^.]*)(\.[^.]*\.?wav)'
+    if [[ `basename "${file}"` =~ $regex ]]
+    then
+      new_name="${BASH_REMATCH[1]}_REEL-%2n${BASH_REMATCH[2]}"
+    fi
+
+    sox_command="sox --show-progress --no-clobber \""${file}"\"  \""${path_out}"/"${new_name/\ /\\ }"\" "
+
+    for i in ${reels[@]}
+    do
+      let duration=$i*SPF
+      echo "Duration: ${duration}s"
+      sox_command+="trim 0 ${duration}s : newfile : "
+    done
+    notice "DEBUG Sox command: $sox_command"
+
+    eval $sox_command
+
+  done
+
+}
+
+
+## MAIN
+
+case $MODE in
+  image)
+    split_image
+    ;;
+  sound)
+    split_sound
+    ;;
+esac
+
+
