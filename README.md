@@ -2,7 +2,7 @@
 
 **Warning** These tools are not polished for general use. If you don't know what they do, don't use them!
 
-## apps.sh [OS X]
+## apps [OS X]
 List some installed applications with version.
 
 ## dcdm-audio-leader
