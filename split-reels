@@ -236,10 +236,10 @@ split_sound() {
   for file in "${input[@]}"; do
     notice "splitting $file ..."
     # reel_name="REEL-$(printf "%02d" $reel)"
-    regex='([^.]*\.?[^.]*)(\.[^.]*\.?wav)'
-    if [[ `basename "${file}"` =~ $regex ]]
+    regex='([^.]*\.?[^.]*)(\.[^.]*)'
+    if [[ `basename "${file}" .wav` =~ $regex ]]
     then
-      new_name="${BASH_REMATCH[1]}_REEL-%2n${BASH_REMATCH[2]}"
+      new_name="${BASH_REMATCH[1]}_REEL-%2n${BASH_REMATCH[2]}.wav"
     fi
 
     sox_command="sox --show-progress --no-clobber \""${file}"\"  \""${path_out}"/"${new_name/\ /\\ }"\" "
