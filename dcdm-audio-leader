@@ -1,5 +1,5 @@
 #!/bin/bash
-# Domingo Stephan v.0.2 30.08.2017
+# Domingo Stephan v.0.3 18.09.2017
 
 # set -ex
 
@@ -7,21 +7,123 @@ path_sox=""
 
 SOX=${path_sox}sox
 
-[ $# -eq 0 ] || [ $# -gt 3 ] && {
+print_usage_and_die() {
   echo ""
   echo "add audio leader and trailer to reels for DCDM."
-  echo "Usage: $0 file_leader file_trailer path_out"
+  echo "  Usage: $0 -r <frame rate> [-l 8] [-t 2] [-f 1000] [-v -20] path_out"
+  echo ""
+  echo "  -r, --rate, --fps  Frame rate for audio calculations (24, 25, 48, 50, etc.; default is 24)"
+  echo "  -f, --frequency    frequency of 2-pop in Hz (default is 1000)"
+  echo "  -l, --leader       add leader with length in seconds, 2-pop before FFOA (default is 8)"
+  # echo "  -t, --trailer      add trailer with length in seconds, 2-pop after LFOA (default is 2)"
+  # not yet implemented
+  echo "  -v, --volume       volume of 2-pop in dbFS (default is -20)"
+  echo ""
   exit 1
 }
 
-file_leader="$1"
-shift
+error() { echo -e ${LRED}"! "${@}${RESTORE}; }
+notice() { echo -e ${LBLUE}${@}${RESTORE}; }
+ok() { echo -e ${LGREEN}${@}${RESTORE}; }
 
-file_trailer="$1"
-shift
+RESTORE='\033[0m'
 
-path_out="$1"
+RED='\033[00;31m'
+GREEN='\033[00;32m'
+BLUE='\033[00;34m'
+LRED='\033[01;31m'
+LGREEN='\033[01;32m'
+LBLUE='\033[01;34m'
 
+## DEFAULTS
+fps=24
+frequency=1000  # Hertz
+leader=8        # seconds
+trailer=2       # seconds
+volume=-20      # dBFS
+
+
+## OPTIONS
+while [ -n "$(echo $1 | grep '^-')" ]
+do
+  case $1 in
+    -h | --help )
+      print_usage_and_die
+      ;;
+
+    -r | --rate | --fps )
+      if [[ $2 =~ ^[0-9]+$ ]]
+      then
+        fps=$2
+      else
+        notice "rate has to be a positive integer (i.e. 24, 25, 48, 50, etc.). Using default."
+      fi
+      shift ;;
+
+    -f | --frequency )
+      if [[ $2 =~ ^[0-9]+$ ]]
+      then
+        frequency=$2
+      else
+        notice "frequency has to be a positive integer (i.e. 1000). Using default."
+      fi
+      echo "       Frequency: $frequency Hz"
+      shift ;;
+
+    -l | --leader )
+      if [[ $2 =~ ^[0-9]+$ ]]
+      then
+        leader=$2
+      else
+        notice "leader has to be a positive integer (i.e. 8, 10). Using default."
+      fi
+      echo "   Leader length: $leader seconds"
+      shift ;;
+
+    -v | --volume )
+      if [[ $2 =~ ^-[0-9]+$ ]]
+      then
+        leader=$2
+      else
+        notice "volume has to be a negative integer (i.e. -18, -20). Using default."
+      fi
+      echo "          Volume: $volume dBFS"
+      shift ;;
+
+    * )
+      error "unknown option \"$1\""
+      print_usage_and_die
+  esac
+  shift
+done
+
+## OUTPUT
+[ "" == "$1" ] && {
+  error "No output specified"
+  print_usage_and_die
+} || {
+  path_out="${1}"
+  echo "          Output: $path_out"
+}
+
+## SETUP
+# units
+let SPF=48000/$fps                            # Samples Per Frame
+let silence_leader=($leader-2)*$fps*$SPF      # in samples
+let silence_trailer=($trailer-2)*$fps*$SPF    # in samples
+let pause=(2*$fps*$SPF)-$SPF
+
+echo "               Rate: $fps"
+echo "  Samples per frame: $SPF"
+echo "     Silence leader: $silence_leader"
+echo "              pause: $pause"
+echo "             volume: $volume"
+
+####
+#
+# exit 0
+#
+####
 
 for file in *.wav ; do
 
@@ -32,13 +134,16 @@ for file in *.wav ; do
     echo "Warning: Input file does not have 24 bit."
   fi
 
-  old_length=`soxi -s "${file}"`
+  old_length=$(soxi -s "${file}")
 
-  ${SOX} "${file_leader}" "${file}" "${file_trailer}" "${file_out}"
+  # ${SOX} "${file_leader}" "${file}" "${file_trailer}" "${file_out}"
 
-  new_length=`soxi -s "${file_out}"`
+  ${SOX} "| sox -n -p synth ${silence_leader}s sine 0" "| sox -n -p synth ${SPF}s sine 1000 gain ${volume}" "| sox -n -p synth ${pause}s sine 0" "${file}" "| sox -n -p synth ${pause}s sine 0" "| sox -n -p synth ${SPF}s sine 1000 gain ${volume}" "| sox -n -p synth ${SPF}s sine 0" -b 24 "${file_out}"
 
-  echo "Old length: $[old_length/2000] frames (@24) / $[old_length/1920] frames (@25)"
-  echo "New length: $[new_length/2000] frames (@24) / $[new_length/1920] frames (@25)"
+  new_length=$(soxi -s "${file_out}")
+
+  echo "Old length: $[old_length/${SPF}] frames (@${fps})"
+  echo "New length: $[new_length/${SPF}] frames (@${fps})"
+  echo ""
 
 done
