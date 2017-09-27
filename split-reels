@@ -1,5 +1,5 @@
 #!/bin/bash
-# Domingo Stephan v0.2 11.09.2017
+# Domingo Stephan v0.3 12.09.2017
 
 print_usage_and_die() {
   echo ""
@@ -8,6 +8,7 @@ print_usage_and_die() {
   echo ""
   echo "  Usage: $0 image [-1 n] [--ext j2c] (<reels file> | --reels <duration in Frames>...) <input path> <path_out>"
   echo "  Usage: $0 sound [-r 24] (<reels file> | --reels <duration in Frames>...) <input files> <path_out>"
+  echo "  Usage: $0 sound [-r 24] --dcdm [-l 8] [-t 2] [-f 1000] [-v -20] <input files> <path_out>"
   echo ""
   echo "        reels_file            Text file with reel duration on each line"
   echo "        path_out              Parent directory to new reels. Format is \"REEL-XX\""
@@ -17,6 +18,13 @@ print_usage_and_die() {
   echo "  -h, --help                  Prints this message"
   echo "  -r, --rate                  Frame rate for audio calculations (24, 25, 48, 50, etc.; default is 24)"
   echo "      --reels DURATION...     Duration of reels"
+  echo ""
+  echo "  DCDM:"
+  echo "      --dcdm                  add leader/trailer for DCDM"
+  echo "  -f, --frequency             frequency of 2-pop in Hz (default is 1000)"
+  echo "  -l, --leader                add leader with length in seconds, 2-pop before FFOA (default is 8)"
+  echo "  -t, --trailer               add trailer with length in seconds, 2-pop after LFOA (default is 2)"
+  echo "  -v, --volume                volume of 2-pop in dbFS (default is -20)"
   exit 1
 }
 
@@ -190,6 +198,7 @@ split_image() {
   notice "attempting to split image..."
 
   reel=$first_reel
+
   for i in "${reels[@]}"
   do
     reel_name="REEL-$(printf "%02d" $reel)"
