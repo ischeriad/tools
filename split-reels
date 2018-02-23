@@ -7,7 +7,7 @@ print_usage_and_die() {
   echo "Use only in folders with complete sequence and nothing else!"
   echo ""
   echo "  Usage: $0 image [-1 n] [--ext j2c] (<reels file> | --reels <duration in Frames>...) <input path> <path_out>"
-  echo "  Usage: $0 sound [-r 24] (<reels file> | --reels <duration in Frames>...) <input files> <path_out>"
+  echo "  Usage: $0 sound [-r 24] [--skip <frames>] (<reels file> | --reels <duration in Frames>...) <input files> <path_out>"
   echo ""
   echo "        reels_file            Text file with reel duration on each line"
   echo "        path_out              Parent directory to new reels. Format is \"REEL-XX\""
@@ -17,6 +17,7 @@ print_usage_and_die() {
   echo "  -h, --help                  Prints this message"
   echo "  -r, --rate                  Frame rate for audio calculations (24, 25, 48, 50, etc.; default is 24)"
   echo "      --reels DURATION...     Duration of reels"
+  echo "  -s, --skip FRAMES           Skip number of frames before beginning first reel (e.g. audio leader)"
   exit 1
 }
 
@@ -105,6 +106,16 @@ do
       fi
       ;;
 
+    -s | --skip )
+      if [[ $2 =~ ^[0-9]+$ ]]
+      then
+        skip=$2
+      else
+        error "skip has to be a positive integer. Exiting."
+        exit 1
+      fi
+      echo "     Skip Frames: $skip"
+      shift ;;
     * )
       error "unknown option \"$1\""
       print_usage_and_die
@@ -183,6 +194,13 @@ echo "      First Reel: $first_reel"
 }
 echo "      Frame Rate: $fps"
 
+# skip leader
+[ "" == "$skip" ] && {
+  # optional argument
+  skip=0
+}
+echo "     Skip Frames: $skip"
+
 
 
 split_image() {
@@ -244,11 +262,14 @@ split_sound() {
 
     sox_command="sox --show-progress --no-clobber \""${file}"\"  \""${path_out}"/"${new_name/\ /\\ }"\" "
 
+    let in=$skip*SPF
+
     for i in ${reels[@]}
     do
       let duration=$i*SPF
       echo "Duration: ${duration}s"
-      sox_command+="trim 0 ${duration}s : newfile : "
+      sox_command+="trim ${in}s ${duration}s : newfile : "
+      in=0 # skip only the first time
     done
     notice "DEBUG Sox command: $sox_command"
 
