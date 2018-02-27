@@ -1,9 +1,29 @@
 #! /bin/bash
-# v0.2 / 150803
+# v0.3
 
-echo "Check Hashes for DCP
-PKL:"
+if [ $(which sha1sum) ]
+then
+  sha_util=$(which sha1sum)
+elif [ $(which shasum) ]
+then
+  sha_util=$(which shasum)
+else
+  echo "No utility to calculate SHA checksums found. Exiting."
+  exit 1
+fi
+
+echo "Checking hashes of DCP..."
 shopt -s nocaseglob
-grep 'OriginalFileName\|Hash' *PKL*.xml | sed -n 's/[^>]*>\([^<]*\)<.*/\1/p' | sed 'N;s/\n/ /; s/\([^ ]*\) \(.*\)/\2 \1/' | sort
-echo "SHA1:"
-for i in *; do sha1sum $i | cut -f1 -d\ | xxd -r -p | base64 | sed "s/^/$i /"; done
+
+# extract expected hashes from PKL
+grep 'OriginalFileName\|Hash' *PKL*.xml | sed -n 's/[^>]*>\([^<]*\)<.*/\1/p' | sed 'N;s/\n/ /; s/\([^ ]*\) \(.*\)/\2 \1/' | sort > original.tmp
+
+# calculate actual hashes from files
+for i in *; do $sha_util $i | cut -f1 -d\ | xxd -r -p | base64 | sed "s/^/$i /" >> copy.tmp ; done
+
+# sort and compare
+grep copy.tmp -v -e 'ASSETMAP' -e 'PKL' -e 'VOLINDEX' -e 'tmp' | sort -o copy.tmp
+diff original.tmp copy.tmp && echo "DCP verification successful"
+
+# cleanup
+rm original.tmp copy.tmp
