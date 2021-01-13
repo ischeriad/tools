@@ -1,7 +1,18 @@
 #!/bin/bash
 
+if [ $# == 0 ]
+then
+	echo "Usage: `basename $0` blockdevice"
+	exit
+fi
+
+# blockdevice
+device="$1"
+device=$(echo "$1" | sed -n 's/.*\(sd.\).*/\1/p')
+
 # unmount DX115 volume for safe removal
-if echo 1 > /sys/block/sdb/device/delete
+echo "detaching device ${device}..."
+if echo 1 > /sys/block/${device}/device/delete
 then
 	echo "DX115 carrier can now be removed"
 else
