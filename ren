@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Domingo Stephan
-# Version 0.3
+# Version 0.4
 
 [ $# -eq 0 ] || [ $# -ne 3 ] && {
   echo ""
@@ -23,7 +23,9 @@ n=$base_n
 
 for file in *.j2c ; do
     formatted_n=$(printf "%07d" $n)
+    echo -ne "\r${formatted_n}"
     # re-use original file extension while we're at it.
     mv "$file" "${prefix}${formatted_n}.${file##*.}"
     let n=n+$step
 done
+echo ""
