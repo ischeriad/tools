@@ -27,6 +27,7 @@ then
 
 	# create file system
 	parted $dev --script mkpart primary ext3 0% 100%
+	sleep 1
 	mkfs.ext3 -I 128 $partition -L "$label"
 
 	parted $dev --script print
