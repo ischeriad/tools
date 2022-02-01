@@ -1,5 +1,5 @@
 #! /bin/bash
-# v0.3
+# v0.4
 
 if [ $(which sha1sum) ]
 then
@@ -19,10 +19,10 @@ shopt -s nocaseglob
 grep 'OriginalFileName\|Hash' *PKL*.xml | sed -n 's/[^>]*>\([^<]*\)<.*/\1/p' | sed 'N;s/\n/ /; s/\([^ ]*\) \(.*\)/\2 \1/' | sort > original.tmp
 
 # calculate actual hashes from files
-for i in *; do $sha_util $i | cut -f1 -d\ | xxd -r -p | base64 | sed "s/^/$i /" >> copy.tmp ; done
+for i in * */*; do [ -f "$i" ] && $sha_util "$i" | cut -f1 -d\ | xxd -r -p | base64 | sed "s#^#"${i}" #" >> copy.tmp ; done
 
 # sort and compare
-grep copy.tmp -v -e 'ASSETMAP' -e 'PKL' -e 'VOLINDEX' -e 'tmp' | sort -o copy.tmp
+grep copy.tmp -v -e 'ASSETMAP' -e 'PKL' -e 'VOLINDEX' -e 'original.tmp' | sort -o copy.tmp
 diff original.tmp copy.tmp && echo "DCP verification successful"
 
 # cleanup
