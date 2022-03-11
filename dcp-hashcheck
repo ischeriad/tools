@@ -1,5 +1,18 @@
 #! /bin/bash
-# v0.4
+# v0.5.1
+
+RESTORE='\033[0m'
+
+RED='\033[00;31m'
+GREEN='\033[00;32m'
+BLUE='\033[00;34m'
+LRED='\033[01;31m'
+LGREEN='\033[01;32m'
+LBLUE='\033[01;34m'
+
+error() { echo -e ${LRED}"! "${@}${RESTORE}; }
+notice() { echo -e ${LBLUE}${@}${RESTORE}; }
+ok() { echo -e ${LGREEN}${@}${RESTORE}; }
 
 if [ $(which sha1sum) ]
 then
@@ -8,7 +21,7 @@ elif [ $(which shasum) ]
 then
   sha_util=$(which shasum)
 else
-  echo "No utility to calculate SHA checksums found. Exiting."
+  error "No utility to calculate SHA checksums found. Exiting."
   exit 1
 fi
 
@@ -22,8 +35,14 @@ grep 'OriginalFileName\|Hash' *PKL*.xml | sed -n 's/[^>]*>\([^<]*\)<.*/\1/p' | s
 for i in * */*; do [ -f "$i" ] && $sha_util "$i" | cut -f1 -d\ | xxd -r -p | base64 | sed "s#^#"${i}" #" >> copy.tmp ; done
 
 # sort and compare
-grep copy.tmp -v -e 'ASSETMAP' -e 'PKL' -e 'VOLINDEX' -e 'original.tmp' | sort -o copy.tmp
-diff original.tmp copy.tmp && echo "DCP verification successful"
+grep copy.tmp -v -e 'ASSETMAP' -e 'PKL_' -e 'VOLINDEX' -e 'original.tmp' | sort -o copy.tmp
+
+if diff original.tmp copy.tmp
+then
+  ok "\tDCP verification successful."
+else
+  error "\tDCP verification failed."
+fi
 
 # cleanup
 rm original.tmp copy.tmp
