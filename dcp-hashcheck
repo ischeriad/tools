@@ -1,5 +1,5 @@
 #! /bin/bash
-# v0.5.1
+# v0.5.2
 
 RESTORE='\033[0m'
 
@@ -25,14 +25,17 @@ else
   exit 1
 fi
 
-echo "Checking hashes of DCP..."
+notice "Original hashes:"
 shopt -s nocaseglob
 
 # extract expected hashes from PKL
 grep 'OriginalFileName\|Hash' *PKL*.xml | sed -n 's/[^>]*>\([^<]*\)<.*/\1/p' | sed 'N;s/\n/ /; s/\([^ ]*\) \(.*\)/\2 \1/' | sort > original.tmp
 
+cat original.tmp
+notice "Checking hashes of DCP..."
+
 # calculate actual hashes from files
-for i in * */*; do [ -f "$i" ] && $sha_util "$i" | cut -f1 -d\ | xxd -r -p | base64 | sed "s#^#"${i}" #" >> copy.tmp ; done
+for i in * */*; do [ -f "$i" ] && $sha_util "$i" | cut -f1 -d\ | xxd -r -p | base64 | sed "s#^#"${i}" #" | tee -a copy.tmp ; done
 
 # sort and compare
 grep copy.tmp -v -e 'ASSETMAP' -e 'PKL_' -e 'VOLINDEX' -e 'original.tmp' | sort -o copy.tmp
