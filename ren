@@ -1,12 +1,15 @@
 #!/bin/bash
 
 # Domingo Stephan
-# Version 0.4
+# Version 0.5
 
-[ $# -eq 0 ] || [ $# -ne 3 ] && {
+padding=7
+
+[ $# -lt 2 ] || [ $# -gt 3 ] && {
   echo ""
-  echo "rename for j2c image sequences."
-  echo "Usage: $0 prefix base step"
+  echo "rename for image sequences."
+  echo "Usage: $0 prefix base [padding (7)]"
+  echo ""
   exit 1
 }
 
@@ -16,16 +19,28 @@ shift
 base_n="$1"
 shift
 
-step="$1"
-shift
+
+[ "" != "$1" ] && {
+  padding="$1"
+  shift
+}
 
 n=$base_n
 
-for file in *.j2c ; do
-    formatted_n=$(printf "%07d" $n)
+first_file=$(ls -1 | head -n 1)
+ext_first_file=${first_file##*.}
+echo "$ext_first_file sequence found."
+
+if [[ "$ext_first_file" =~ ^(j2c|tif|tiff|jpg|png)$ ]]; then
+  for file in *.${ext_first_file} ; do
+    formatted_n=$(printf "%0${padding}d" $n)
     echo -ne "\r${formatted_n}"
     # re-use original file extension while we're at it.
     mv "$file" "${prefix}${formatted_n}.${file##*.}"
-    let n=n+$step
-done
-echo ""
+    let n=n+1
+  done
+  echo ""
+else
+    echo "Image sequence not found (j2c, tif, tiff, jpg, png), exiting."
+    exit 1
+fi
